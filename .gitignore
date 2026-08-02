@@ -1,0 +1,38 @@
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# build output
+/dist
+/build
+*.tsbuildinfo
+
+# environment
+.env
+.env.local
+.env.*.local
+
+# encrypted local storage (StorageService writes here)
+/storage
+
+# logs
+logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# coverage / tests
+/coverage
+/.nyc_output
+
+# editors / OS
+.idea
+.vscode
+*.swp
+.DS_Store
+Thumbs.db
+
+# prisma
+prisma/*.db
+prisma/*.db-journal

@@ -1,0 +1,223 @@
+// Heirloom API — Prisma schema
+// Models the PRD (Document 5) data design: a User owns Beneficiaries,
+// Guardians, Assets, Documents, Messages, a CheckIn, ActivityLogs and a
+// single LegacyPlan. Every table references the user.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum GuardianStatus {
+  PENDING
+  VERIFIED
+  DECLINED
+}
+
+enum AssetStatus {
+  PROTECTED
+  RELEASED
+  CLAIMED
+}
+
+enum DocumentCategory {
+  PASSPORT
+  BIRTH_CERTIFICATE
+  INSURANCE
+  HOUSE_DEED
+  MARRIAGE_CERTIFICATE
+  BUSINESS
+  TAX
+  PASSWORD_HINT
+  OTHER
+}
+
+enum MessageType {
+  LETTER
+  VIDEO
+  VOICE
+  PHOTO
+}
+
+enum CheckInStatus {
+  ACTIVE
+  MISSED
+  VERIFYING
+  RELEASED
+}
+
+enum LegacyPlanStatus {
+  DRAFT
+  PROTECTED
+  VERIFYING
+  VERIFIED
+  RELEASED
+}
+
+// ---------------------------------------------------------------------------
+// Models
+// ---------------------------------------------------------------------------
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  passwordHash  String
+  name          String
+  walletAddress String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  beneficiaries Beneficiary[]
+  guardians     Guardian[]
+  assets        Asset[]
+  documents     Document[]
+  messages      Message[]
+  activityLogs  ActivityLog[]
+  checkIn       CheckIn?
+  legacyPlan    LegacyPlan?
+
+  @@index([walletAddress])
+}
+
+model Beneficiary {
+  id                   String   @id @default(cuid())
+  userId               String
+  name                 String
+  relationship         String
+  email                String
+  phone                String?
+  walletAddress        String?
+  allocationPercentage Int      @default(0)
+  verified             Boolean  @default(false)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assets         Asset[]
+  messages       Message[]
+
+  @@index([userId])
+}
+
+model Guardian {
+  id           String         @id @default(cuid())
+  userId       String
+  name         String
+  email        String
+  relationship String
+  status       GuardianStatus @default(PENDING)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Asset {
+  id          String      @id @default(cuid())
+  userId      String
+  assetCode   String
+  amount      Decimal     @db.Decimal(20, 7)
+  recipientId String?
+  status      AssetStatus @default(PROTECTED)
+  contractId  String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipient Beneficiary? @relation(fields: [recipientId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([recipientId])
+}
+
+model Document {
+  id        String           @id @default(cuid())
+  userId    String
+  title     String
+  category  DocumentCategory @default(OTHER)
+  fileUrl   String
+  encrypted Boolean          @default(true)
+  iv        String
+  authTag   String
+  mimeType  String
+  size      Int
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Message {
+  id               String      @id @default(cuid())
+  userId           String
+  type             MessageType
+  recipientId      String?
+  title            String
+  contentEncrypted String?
+  contentIv        String?
+  contentAuthTag   String?
+  fileUrl          String?
+  // releaseRule supports the Legacy Journey:
+  // { kind: 'IMMEDIATELY' | 'AFTER_DAYS' | 'ON_DATE' | 'AT_AGE' | 'ON_EVENT', value?: string | number }
+  releaseRule      Json
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipient Beneficiary? @relation(fields: [recipientId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([recipientId])
+}
+
+model CheckIn {
+  id          String        @id @default(cuid())
+  userId      String        @unique
+  intervalDays Int          @default(90)
+  lastCheckIn DateTime      @default(now())
+  nextCheckIn DateTime
+  status      CheckInStatus @default(ACTIVE)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([nextCheckIn])
+  @@index([status])
+}
+
+model ActivityLog {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String
+  message   String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model LegacyPlan {
+  id         String           @id @default(cuid())
+  userId     String           @unique
+  contractId String?
+  threshold  Int              @default(2)
+  status     LegacyPlanStatus @default(DRAFT)
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
