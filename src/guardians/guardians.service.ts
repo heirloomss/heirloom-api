@@ -96,7 +96,7 @@ export class GuardiansService {
       onChain = await this.stellar.approveGuardian(owner.walletAddress, dto.guardianAddress);
     }
 
-    if (owner) {
+    if (owner?.email) {
       this.notifications.guardianAccepted(owner.email, guardian.name);
     }
 

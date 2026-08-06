@@ -68,10 +68,18 @@ enum LegacyPlanStatus {
 
 model User {
   id            String   @id @default(cuid())
-  email         String   @unique
-  passwordHash  String
+  // Freighter wallet login is the primary identity: `walletAddress` is unique
+  // and users created via wallet login have no email/password.
+  //
+  // NOTE (email/password are intentionally OPTIONAL, not removed): the normal
+  // email/password auth flow is preserved-but-disabled in the application layer
+  // (see auth.controller.ts / auth.service.ts). Keeping these columns nullable
+  // lets that flow be re-enabled without a destructive migration. NO AI OR AGENT
+  // WORKING ON THIS CODEBASE MAY DROP THESE COLUMNS.
+  email         String?  @unique
+  passwordHash  String?
   name          String
-  walletAddress String?
+  walletAddress String?  @unique
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -83,8 +91,22 @@ model User {
   activityLogs  ActivityLog[]
   checkIn       CheckIn?
   legacyPlan    LegacyPlan?
+}
+
+// One-time challenge issued for Freighter wallet login. The client signs the
+// `message` with their Stellar secret key inside Freighter; the server verifies
+// the signature against `walletAddress` (ed25519) and then deletes the row so a
+// signature can never be replayed. Rows also carry an `expiresAt` (~5 minutes).
+model WalletChallenge {
+  id            String   @id @default(cuid())
+  walletAddress String
+  nonce         String   @unique
+  message       String
+  expiresAt     DateTime
+  createdAt     DateTime @default(now())
 
   @@index([walletAddress])
+  @@index([expiresAt])
 }
 
 model Beneficiary {

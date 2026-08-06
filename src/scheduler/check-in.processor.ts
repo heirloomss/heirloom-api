@@ -41,7 +41,10 @@ export class CheckInProcessor extends WorkerHost {
         data: { status: CheckInStatus.MISSED },
       });
 
-      this.notifications.checkInMissed(checkIn.user.email);
+      // Wallet-only accounts may have no email on file — only notify when we have one.
+      if (checkIn.user.email) {
+        this.notifications.checkInMissed(checkIn.user.email);
+      }
       for (const guardian of checkIn.user.guardians) {
         this.notifications.guardianVerificationRequested(
           guardian.email,

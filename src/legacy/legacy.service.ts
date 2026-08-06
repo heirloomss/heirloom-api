@@ -148,7 +148,10 @@ export class LegacyService {
       data: { status: AssetStatus.PROTECTED, contractId: result.txHash },
     });
 
-    this.notifications.legacyUpdated(user.email);
+    // Wallet-only accounts may have no email on file — only notify when we have one.
+    if (user.email) {
+      this.notifications.legacyUpdated(user.email);
+    }
     await this.activity.record(
       userId,
       ActivityType.LEGACY_PROTECTED,

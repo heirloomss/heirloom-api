@@ -5,7 +5,10 @@
 export interface JwtPayload {
   /** User id (Prisma cuid). */
   sub: string;
-  email: string;
+  /** Present for legacy email/password accounts; absent for wallet-only users. */
+  email?: string;
+  /** Present for Freighter wallet accounts. */
+  walletAddress?: string;
 }
 
 /**
@@ -13,5 +16,6 @@ export interface JwtPayload {
  */
 export interface AuthUser {
   id: string;
-  email: string;
+  email?: string;
+  walletAddress?: string;
 }
