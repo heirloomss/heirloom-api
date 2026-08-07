@@ -14,7 +14,7 @@ Everything else lives here.
 
 - **NestJS 11** (TypeScript, strict)
 - **Prisma 6** ORM + **PostgreSQL**
-- **JWT** session auth (email/password; Stellar wallet linking)
+- **JWT** session auth (Freighter wallet signature; email/password preserved but disabled)
 - **BullMQ + Redis** — the Life Check-In scheduler
 - **AES-256-GCM** encryption for documents/messages
 - **@stellar/stellar-sdk** for Soroban contract interaction
@@ -70,7 +70,7 @@ via the `Authorization: Bearer <token>` header. Every mutation also records an
 | Area | Routes |
 |---|---|
 | Health | `GET /api/health` |
-| Auth | `POST /api/auth/register` · `POST /api/auth/login` · wallet linking |
+| Auth | `POST /api/auth/wallet/challenge` · `POST /api/auth/wallet/verify` (Freighter sign-in) · wallet linking. Email/password `register`/`login` are preserved in the code but disabled. |
 | Users | `GET /api/users/me` · `PATCH /api/users/me` |
 | Beneficiaries | `GET/POST /api/beneficiaries` · `GET/PATCH/DELETE /api/beneficiaries/:id` |
 | Guardians | `GET/POST /api/guardians` · `GET/PATCH/DELETE /api/guardians/:id` |
@@ -88,7 +88,7 @@ URLs are never exposed.
 
 ```
 src/
-├── auth/            # registration, login, JWT, wallet linking
+├── auth/            # Freighter wallet sign-in, JWT, wallet linking (email/password preserved but disabled)
 ├── users/           # profile, check-in preferences
 ├── beneficiaries/   # the people who matter most
 ├── guardians/       # trusted verifiers (threshold rules)
