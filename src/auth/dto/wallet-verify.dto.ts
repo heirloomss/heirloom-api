@@ -8,7 +8,7 @@ import { IsString, Matches } from 'class-validator';
 export class WalletVerifyDto {
   @IsString()
   @Matches(/^G[A-Z2-7]{55}$/, {
-    message: 'That doesn\'t look like a valid Stellar account. Please check and try again.',
+    message: "That doesn't look like a valid Stellar account. Please check and try again.",
   })
   walletAddress!: string;
 

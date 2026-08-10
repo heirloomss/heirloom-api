@@ -36,7 +36,7 @@ export class MessagesService {
   async findOne(userId: string, id: string): Promise<MessageWithContent> {
     const message = await this.prisma.message.findFirst({ where: { id, userId } });
     if (!message) {
-      throw new NotFoundException('We couldn\'t find that message.');
+      throw new NotFoundException("We couldn't find that message.");
     }
     return this.withDecryptedContent(message);
   }
@@ -93,25 +93,17 @@ export class MessagesService {
     }
 
     const message = await this.prisma.message.update({ where: { id }, data });
-    await this.activity.record(
-      userId,
-      ActivityType.MESSAGE_UPDATED,
-      `Updated "${message.title}".`,
-    );
+    await this.activity.record(userId, ActivityType.MESSAGE_UPDATED, `Updated "${message.title}".`);
     return this.withDecryptedContent(message);
   }
 
   async remove(userId: string, id: string): Promise<{ success: true }> {
     const message = await this.prisma.message.findFirst({ where: { id, userId } });
     if (!message) {
-      throw new NotFoundException('We couldn\'t find that message.');
+      throw new NotFoundException("We couldn't find that message.");
     }
     await this.prisma.message.delete({ where: { id } });
-    await this.activity.record(
-      userId,
-      ActivityType.MESSAGE_REMOVED,
-      `Removed "${message.title}".`,
-    );
+    await this.activity.record(userId, ActivityType.MESSAGE_REMOVED, `Removed "${message.title}".`);
     return { success: true };
   }
 
@@ -135,7 +127,7 @@ export class MessagesService {
       where: { id: recipientId, userId },
     });
     if (!recipient) {
-      throw new BadRequestException('That recipient isn\'t one of your beneficiaries.');
+      throw new BadRequestException("That recipient isn't one of your beneficiaries.");
     }
   }
 }

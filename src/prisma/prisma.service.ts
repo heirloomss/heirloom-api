@@ -16,9 +16,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     } catch (error) {
       // Don't crash the whole app at boot if the DB is briefly unavailable;
       // queries will surface the error. Log clearly so it's easy to spot.
-      this.logger.error(
-        `Could not connect to the database at boot: ${(error as Error).message}`,
-      );
+      this.logger.error(`Could not connect to the database at boot: ${(error as Error).message}`);
     }
   }
 

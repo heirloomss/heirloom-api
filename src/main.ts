@@ -2,6 +2,7 @@ import 'reflect-metadata';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
+import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 
@@ -9,6 +10,14 @@ async function bootstrap(): Promise<void> {
   const logger = new Logger('Bootstrap');
   const app = await NestFactory.create(AppModule, { bufferLogs: false });
   const config = app.get(ConfigService);
+
+  // Secure HTTP headers. This is a JSON API (no server-rendered HTML), so the
+  // cross-origin resource policy is relaxed just enough for the web app.
+  app.use(
+    helmet({
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
+    }),
+  );
 
   // All routes live under /api.
   app.setGlobalPrefix('api');
@@ -20,12 +29,13 @@ async function bootstrap(): Promise<void> {
     credentials: true,
   });
 
-  // Validate and strip unknown fields on every request body.
+  // Validate and strip unknown fields on every request body. Unknown fields are
+  // rejected outright so malformed or probing payloads fail fast.
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
       transform: true,
-      forbidNonWhitelisted: false,
+      forbidNonWhitelisted: true,
       transformOptions: { enableImplicitConversion: true },
     }),
   );

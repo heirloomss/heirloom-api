@@ -51,14 +51,18 @@ export class GuardiansController {
     return this.guardians.remove(userId, id);
   }
 
-  /** POST /api/guardians/:id/approve — records a guardian verification. */
-  @Post(':id/approve')
+  /**
+   * POST /api/guardians/:id/approve/build — build the unsigned approve_guardian
+   * transaction for the guardian to sign in their own wallet. The signed XDR is
+   * relayed via POST /api/legacy/submit with action "approve".
+   */
+  @Post(':id/approve/build')
   @HttpCode(HttpStatus.OK)
-  approve(
+  approveBuild(
     @CurrentUser('id') userId: string,
     @Param('id') id: string,
     @Body() dto: ApproveGuardianDto,
   ) {
-    return this.guardians.approve(userId, id, dto);
+    return this.guardians.approveBuild(userId, id, dto);
   }
 }

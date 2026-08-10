@@ -30,7 +30,7 @@ export class AssetsService {
       include: { recipient: { select: { id: true, name: true, relationship: true } } },
     });
     if (!asset) {
-      throw new NotFoundException('We couldn\'t find that asset.');
+      throw new NotFoundException("We couldn't find that asset.");
     }
     return asset;
   }
@@ -96,7 +96,7 @@ export class AssetsService {
       where: { id: recipientId, userId },
     });
     if (!recipient) {
-      throw new BadRequestException('That recipient isn\'t one of your beneficiaries.');
+      throw new BadRequestException("That recipient isn't one of your beneficiaries.");
     }
   }
 }

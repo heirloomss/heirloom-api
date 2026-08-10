@@ -1,13 +1,4 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  Patch,
-  Post,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { AssetsService } from './assets.service';
@@ -35,11 +26,7 @@ export class AssetsController {
   }
 
   @Patch(':id')
-  update(
-    @CurrentUser('id') userId: string,
-    @Param('id') id: string,
-    @Body() dto: UpdateAssetDto,
-  ) {
+  update(@CurrentUser('id') userId: string, @Param('id') id: string, @Body() dto: UpdateAssetDto) {
     return this.assets.update(userId, id, dto);
   }
 

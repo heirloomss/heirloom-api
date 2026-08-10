@@ -73,10 +73,7 @@ export class AuthService {
    * challenge for this wallet. On success we find-or-create the user and issue a
    * JWT. The challenge is consumed either way so it can never be replayed.
    */
-  async verifyWalletSignature(
-    walletAddress: string,
-    signature: string,
-  ): Promise<AuthResult> {
+  async verifyWalletSignature(walletAddress: string, signature: string): Promise<AuthResult> {
     const challenge = await this.prisma.walletChallenge.findFirst({
       where: { walletAddress, expiresAt: { gt: new Date() } },
       orderBy: { createdAt: 'desc' },
@@ -106,7 +103,7 @@ export class AuthService {
   async me(userId: string): Promise<SafeUser> {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) {
-      throw new UnauthorizedException('We couldn\'t find your account.');
+      throw new UnauthorizedException("We couldn't find your account.");
     }
     return this.strip(user);
   }
@@ -176,11 +173,7 @@ export class AuthService {
   // --------------------------------------------------------------------------
 
   /** Build the exact human-readable text the wallet signs. */
-  private buildChallengeMessage(
-    walletAddress: string,
-    nonce: string,
-    issuedAt: Date,
-  ): string {
+  private buildChallengeMessage(walletAddress: string, nonce: string, issuedAt: Date): string {
     return [
       'Heirloom — sign in to your digital legacy.',
       '',
@@ -194,11 +187,7 @@ export class AuthService {
   }
 
   /** Cryptographically verify a Stellar ed25519 signature over `message`. */
-  private verifySignature(
-    walletAddress: string,
-    message: string,
-    signature: string,
-  ): boolean {
+  private verifySignature(walletAddress: string, message: string, signature: string): boolean {
     try {
       const keypair = Keypair.fromPublicKey(walletAddress);
       const signatureBuffer = this.decodeSignature(signature);

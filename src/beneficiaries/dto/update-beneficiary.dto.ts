@@ -34,7 +34,7 @@ export class UpdateBeneficiaryDto {
 
   @IsOptional()
   @Matches(/^G[A-Z2-7]{55}$/, {
-    message: 'That doesn\'t look like a valid Stellar account.',
+    message: "That doesn't look like a valid Stellar account.",
   })
   walletAddress?: string;
 

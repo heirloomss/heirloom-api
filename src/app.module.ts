@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { validateEnv } from './config/env.validation';
 import { PrismaModule } from './prisma/prisma.module';
 import { CommonModule } from './common/common.module';
@@ -25,6 +27,15 @@ import { HealthController } from './health/health.controller';
       cache: true,
       validate: validateEnv,
     }),
+    // Global rate limiting: 120 requests/minute per IP by default. Sensitive
+    // endpoints (e.g. the wallet challenge) tighten this with @Throttle.
+    ThrottlerModule.forRoot([
+      {
+        name: 'default',
+        ttl: 60_000,
+        limit: 120,
+      },
+    ]),
     // Infrastructure
     PrismaModule,
     CommonModule,
@@ -44,5 +55,9 @@ import { HealthController } from './health/health.controller';
     SchedulerModule,
   ],
   controllers: [HealthController],
+  providers: [
+    // Apply rate limiting across every route.
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
+  ],
 })
 export class AppModule {}

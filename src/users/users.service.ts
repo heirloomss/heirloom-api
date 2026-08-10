@@ -22,7 +22,7 @@ export class UsersService {
       },
     });
     if (!user) {
-      throw new NotFoundException('We couldn\'t find your account.');
+      throw new NotFoundException("We couldn't find your account.");
     }
     return user;
   }

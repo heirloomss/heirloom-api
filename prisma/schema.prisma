@@ -57,9 +57,11 @@ enum CheckInStatus {
 enum LegacyPlanStatus {
   DRAFT
   PROTECTED
+  FUNDED
   VERIFYING
   VERIFIED
   RELEASED
+  CANCELLED
 }
 
 // ---------------------------------------------------------------------------
@@ -130,14 +132,15 @@ model Beneficiary {
 }
 
 model Guardian {
-  id           String         @id @default(cuid())
-  userId       String
-  name         String
-  email        String
-  relationship String
-  status       GuardianStatus @default(PENDING)
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
+  id            String         @id @default(cuid())
+  userId        String
+  name          String
+  email         String
+  relationship  String
+  walletAddress String?
+  status        GuardianStatus @default(PENDING)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -235,7 +238,16 @@ model ActivityLog {
 model LegacyPlan {
   id         String           @id @default(cuid())
   userId     String           @unique
+  // The Soroban contract instance id (`C...`) the plan lives in. Distinct from
+  // any transaction hash — this identifies the deployed contract, not a tx.
   contractId String?
+  // The numeric on-chain plan id returned by `create_legacy` (u64). Null until
+  // the owner has signed and submitted the create_legacy transaction.
+  legacyId   BigInt?
+  // The token (Stellar Asset Contract `C...`) the estate is committed in, and
+  // the committed total in the token's smallest unit (stroops for XLM).
+  tokenAddress String?
+  totalAmount  Decimal?       @db.Decimal(38, 0)
   threshold  Int              @default(2)
   status     LegacyPlanStatus @default(DRAFT)
   createdAt  DateTime         @default(now())

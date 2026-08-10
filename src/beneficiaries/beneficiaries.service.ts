@@ -27,7 +27,7 @@ export class BeneficiariesService {
   async findOne(userId: string, id: string): Promise<Beneficiary> {
     const beneficiary = await this.prisma.beneficiary.findFirst({ where: { id, userId } });
     if (!beneficiary) {
-      throw new NotFoundException('We couldn\'t find that beneficiary.');
+      throw new NotFoundException("We couldn't find that beneficiary.");
     }
     return beneficiary;
   }

@@ -1,12 +1,5 @@
-import {
-  Body,
-  Controller,
-  Get,
-  HttpCode,
-  HttpStatus,
-  Post,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Post, UseGuards } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { AuthService } from './auth.service';
@@ -34,6 +27,7 @@ export class AuthController {
   /** POST /api/auth/wallet/challenge — issue a one-time message to sign. */
   @Post('wallet/challenge')
   @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { ttl: 60_000, limit: 10 } })
   walletChallenge(@Body() dto: WalletChallengeDto) {
     return this.auth.createWalletChallenge(dto.walletAddress);
   }
@@ -41,6 +35,7 @@ export class AuthController {
   /** POST /api/auth/wallet/verify — verify the signature and issue a JWT. */
   @Post('wallet/verify')
   @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { ttl: 60_000, limit: 10 } })
   walletVerify(@Body() dto: WalletVerifyDto) {
     return this.auth.verifyWalletSignature(dto.walletAddress, dto.signature);
   }
@@ -74,7 +69,7 @@ export class AuthController {
   @Post('logout')
   @HttpCode(HttpStatus.OK)
   logout() {
-    return { message: 'You\'re signed out. Your legacy is safe until you return.' };
+    return { message: "You're signed out. Your legacy is safe until you return." };
   }
 
   /** GET /api/auth/me */

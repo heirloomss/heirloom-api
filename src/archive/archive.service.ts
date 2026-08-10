@@ -1,9 +1,4 @@
-import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
-  StreamableFile,
-} from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, StreamableFile } from '@nestjs/common';
 import { Document, DocumentCategory } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
@@ -71,10 +66,13 @@ export class ArchiveService {
   }
 
   /** Decrypts and streams a document back to its owner. */
-  async download(userId: string, id: string): Promise<{ file: StreamableFile; document: Document }> {
+  async download(
+    userId: string,
+    id: string,
+  ): Promise<{ file: StreamableFile; document: Document }> {
     const document = await this.prisma.document.findFirst({ where: { id, userId } });
     if (!document) {
-      throw new NotFoundException('We couldn\'t find that document.');
+      throw new NotFoundException("We couldn't find that document.");
     }
     const key = this.storage.keyFromUrl(document.fileUrl);
     const ciphertext = await this.storage.read(key);
@@ -85,7 +83,7 @@ export class ArchiveService {
   async remove(userId: string, id: string): Promise<{ success: true }> {
     const document = await this.prisma.document.findFirst({ where: { id, userId } });
     if (!document) {
-      throw new NotFoundException('We couldn\'t find that document.');
+      throw new NotFoundException("We couldn't find that document.");
     }
     await this.storage.delete(this.storage.keyFromUrl(document.fileUrl));
     await this.prisma.document.delete({ where: { id } });

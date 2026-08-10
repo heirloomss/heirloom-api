@@ -1,17 +1,16 @@
-import {
-  Body,
-  Controller,
-  Get,
-  HttpCode,
-  HttpStatus,
-  Post,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Post, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { LegacyService } from './legacy.service';
 import { ProtectLegacyDto } from './dto/protect-legacy.dto';
+import { SubmitLegacyDto } from './dto/submit-legacy.dto';
+import { BuildClaimDto, BuildReleaseDto } from './dto/build-action.dto';
 
+/**
+ * Self-custodial legacy flow. Every state change is a two-step handshake:
+ * a `/*​/build` endpoint returns an unsigned transaction the client signs in
+ * Freighter, then `/submit` relays the signed envelope and reconciles the DB.
+ */
 @Controller('legacy')
 @UseGuards(JwtAuthGuard)
 export class LegacyController {
@@ -23,17 +22,46 @@ export class LegacyController {
     return this.legacy.overview(userId);
   }
 
-  /** POST /api/legacy/protect — create the on-chain plan. */
-  @Post('protect')
-  protect(@CurrentUser('id') userId: string, @Body() dto: ProtectLegacyDto) {
-    return this.legacy.protect(userId, dto);
+  /** POST /api/legacy/protect/build — unsigned create_legacy (owner). */
+  @Post('protect/build')
+  @HttpCode(HttpStatus.OK)
+  protectBuild(@CurrentUser('id') userId: string, @Body() dto: ProtectLegacyDto) {
+    return this.legacy.protectBuild(userId, dto);
   }
 
-  /** POST /api/legacy/simulate-release — demo verification + release flow. */
-  @Post('simulate-release')
+  /** POST /api/legacy/deposit/build — unsigned deposit (owner). */
+  @Post('deposit/build')
   @HttpCode(HttpStatus.OK)
-  simulateRelease(@CurrentUser('id') userId: string) {
-    return this.legacy.simulateRelease(userId);
+  depositBuild(@CurrentUser('id') userId: string) {
+    return this.legacy.depositBuild(userId);
+  }
+
+  /** POST /api/legacy/release/build — unsigned finalize_release (permissionless). */
+  @Post('release/build')
+  @HttpCode(HttpStatus.OK)
+  releaseBuild(@CurrentUser('id') userId: string, @Body() dto: BuildReleaseDto) {
+    return this.legacy.releaseBuild(userId, dto.callerAddress);
+  }
+
+  /** POST /api/legacy/claim/build — unsigned claim_assets (beneficiary). */
+  @Post('claim/build')
+  @HttpCode(HttpStatus.OK)
+  claimBuild(@CurrentUser('id') userId: string, @Body() dto: BuildClaimDto) {
+    return this.legacy.claimBuild(userId, dto.beneficiaryId, dto.beneficiaryAddress);
+  }
+
+  /** POST /api/legacy/cancel/build — unsigned cancel_legacy (owner). */
+  @Post('cancel/build')
+  @HttpCode(HttpStatus.OK)
+  cancelBuild(@CurrentUser('id') userId: string) {
+    return this.legacy.cancelBuild(userId);
+  }
+
+  /** POST /api/legacy/submit — relay a client-signed transaction. */
+  @Post('submit')
+  @HttpCode(HttpStatus.OK)
+  submit(@CurrentUser('id') userId: string, @Body() dto: SubmitLegacyDto) {
+    return this.legacy.submit(userId, dto);
   }
 
   /** GET /api/legacy/claims — claim packages for beneficiaries. */

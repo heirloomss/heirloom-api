@@ -1,11 +1,5 @@
 import { Type } from 'class-transformer';
-import {
-  IsOptional,
-  IsString,
-  MaxLength,
-  MinLength,
-  ValidateNested,
-} from 'class-validator';
+import { IsOptional, IsString, MaxLength, MinLength, ValidateNested } from 'class-validator';
 import { ReleaseRuleDto } from './create-message.dto';
 
 export class UpdateMessageDto {

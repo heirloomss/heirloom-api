@@ -1,10 +1,16 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { Guardian, GuardianStatus, User } from '@prisma/client';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { Guardian, GuardianStatus, LegacyPlanStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ActivityService } from '../activity/activity.service';
 import { ActivityType } from '../activity/activity.constants';
 import { NotificationsService } from '../notifications/notifications.service';
 import { StellarService } from '../stellar/stellar.service';
+import { UnsignedTransaction } from '../stellar/stellar.types';
 import { CreateGuardianDto } from './dto/create-guardian.dto';
 import { UpdateGuardianDto } from './dto/update-guardian.dto';
 import { ApproveGuardianDto } from './dto/approve-guardian.dto';
@@ -32,7 +38,7 @@ export class GuardiansService {
   async findOne(userId: string, id: string): Promise<Guardian> {
     const guardian = await this.prisma.guardian.findFirst({ where: { id, userId } });
     if (!guardian) {
-      throw new NotFoundException('We couldn\'t find that guardian.');
+      throw new NotFoundException("We couldn't find that guardian.");
     }
     return guardian;
   }
@@ -79,33 +85,46 @@ export class GuardiansService {
   }
 
   /**
-   * Records a guardian's verification. Marks the guardian VERIFIED, mirrors the
-   * approval on-chain (or in simulated mode), notifies the owner and logs it.
+   * Build the on-chain `approve_guardian` transaction for the guardian to sign
+   * in their own wallet (self-custody — the API never signs for them). The
+   * guardian's address is recorded so future references match the plan, and the
+   * plan must be Funded on-chain before approvals are accepted.
+   *
+   * The guardian's VERIFIED status and the owner's notification are applied by
+   * `LegacyService.submit("approve")` once the signed transaction confirms.
    */
-  async approve(userId: string, id: string, dto: ApproveGuardianDto) {
+  async approveBuild(
+    userId: string,
+    id: string,
+    dto: ApproveGuardianDto,
+  ): Promise<UnsignedTransaction> {
     const guardian = await this.findOne(userId, id);
-    const owner: User | null = await this.prisma.user.findUnique({ where: { id: userId } });
 
-    const updated = await this.prisma.guardian.update({
-      where: { id },
-      data: { status: GuardianStatus.VERIFIED },
-    });
-
-    let onChain = undefined;
-    if (owner?.walletAddress && dto.guardianAddress) {
-      onChain = await this.stellar.approveGuardian(owner.walletAddress, dto.guardianAddress);
+    const guardianAddress = dto.guardianAddress ?? guardian.walletAddress;
+    if (!guardianAddress) {
+      throw new BadRequestException('Connect your wallet before approving this legacy.');
+    }
+    if (guardian.walletAddress && guardian.walletAddress !== guardianAddress) {
+      throw new BadRequestException(
+        'This wallet does not match the one registered for this guardian.',
+      );
     }
 
-    if (owner?.email) {
-      this.notifications.guardianAccepted(owner.email, guardian.name);
+    const plan = await this.prisma.legacyPlan.findUnique({ where: { userId } });
+    if (!plan || plan.legacyId == null) {
+      throw new BadRequestException('This legacy is not registered on-chain yet.');
+    }
+    if (plan.status !== LegacyPlanStatus.FUNDED) {
+      throw new ConflictException('This legacy is not ready for guardian approval yet.');
     }
 
-    await this.activity.record(
-      userId,
-      ActivityType.GUARDIAN_ACCEPTED,
-      `${guardian.name} accepted your invitation. Your legacy is a little more protected today.`,
-    );
+    if (!guardian.walletAddress) {
+      await this.prisma.guardian.update({
+        where: { id },
+        data: { walletAddress: guardianAddress },
+      });
+    }
 
-    return { guardian: updated, onChain };
+    return this.stellar.buildApproveGuardian(guardianAddress, plan.legacyId);
   }
 }

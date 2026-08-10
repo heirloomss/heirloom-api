@@ -7,7 +7,7 @@ import { AuthUser } from '../types/jwt-payload';
  * Usage: `@CurrentUser() user: AuthUser` or `@CurrentUser('id') userId: string`.
  */
 export const CurrentUser = createParamDecorator(
-  (data: keyof AuthUser | undefined, ctx: ExecutionContext): AuthUser | string => {
+  (data: keyof AuthUser | undefined, ctx: ExecutionContext): AuthUser | string | undefined => {
     const request = ctx.switchToHttp().getRequest<Request & { user: AuthUser }>();
     const user = request.user;
     return data ? user[data] : user;

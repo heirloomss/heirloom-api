@@ -31,12 +31,12 @@ export class CreateBeneficiaryDto {
 
   @IsOptional()
   @Matches(/^G[A-Z2-7]{55}$/, {
-    message: 'That doesn\'t look like a valid Stellar account.',
+    message: "That doesn't look like a valid Stellar account.",
   })
   walletAddress?: string;
 
   @IsInt()
-  @Min(0, { message: 'Allocation can\'t be negative.' })
-  @Max(100, { message: 'Allocation can\'t exceed 100%.' })
+  @Min(0, { message: "Allocation can't be negative." })
+  @Max(100, { message: "Allocation can't exceed 100%." })
   allocationPercentage!: number;
 }
