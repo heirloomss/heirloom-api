@@ -1,4 +1,29 @@
-import { IsEmail, IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
+import {
+  IsBoolean,
+  IsEmail,
+  IsOptional,
+  IsString,
+  Matches,
+  MaxLength,
+  MinLength,
+  ValidateNested,
+} from 'class-validator';
+import { Type } from 'class-transformer';
+
+/** The owner's per-channel notification toggles (all optional, default on). */
+export class NotificationPreferencesDto {
+  @IsOptional()
+  @IsBoolean()
+  checkInReminders?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  guardianResponses?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  beneficiaryClaims?: boolean;
+}
 
 export class UpdateProfileDto {
   @IsOptional()
@@ -17,4 +42,9 @@ export class UpdateProfileDto {
     message: 'That account address doesn’t look quite right. It should begin with a G.',
   })
   walletAddress?: string;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => NotificationPreferencesDto)
+  notificationPrefs?: NotificationPreferencesDto;
 }

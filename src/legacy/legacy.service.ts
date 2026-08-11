@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import {
   AssetStatus,
   CheckInStatus,
@@ -37,6 +38,7 @@ export class LegacyService {
     private readonly activity: ActivityService,
     private readonly notifications: NotificationsService,
     private readonly stellar: StellarService,
+    private readonly config: ConfigService,
   ) {}
 
   /** The current plan plus a snapshot of what it protects. */
@@ -65,6 +67,51 @@ export class LegacyService {
       checkIn,
       onChainReady: this.stellar.isConfigured(),
     };
+  }
+
+  /**
+   * The guardian approval threshold and how many guardians exist, for the
+   * "N of M" control. `requiredApprovals` comes from a stored plan when one
+   * exists, otherwise the same default the on-chain build uses (min(2, count)),
+   * clamped so it can never exceed the number of guardians.
+   */
+  async guardianSettings(userId: string) {
+    const [plan, guardianCount] = await Promise.all([
+      this.prisma.legacyPlan.findUnique({ where: { userId } }),
+      this.prisma.guardian.count({ where: { userId } }),
+    ]);
+    const stored = plan?.threshold ?? Math.min(2, guardianCount || 1);
+    const requiredApprovals = guardianCount === 0 ? 0 : Math.min(stored, guardianCount);
+    return { guardianCount, requiredApprovals };
+  }
+
+  /**
+   * Persist the approval threshold while the plan is still a draft. Once the
+   * legacy is registered on-chain the threshold is fixed in the contract, so we
+   * refuse to change it here rather than let the DB drift from the chain.
+   */
+  async setThreshold(userId: string, threshold: number) {
+    const guardianCount = await this.prisma.guardian.count({ where: { userId } });
+    if (guardianCount > 0 && threshold > guardianCount) {
+      throw new BadRequestException(
+        "The approval threshold can't be more than the number of guardians.",
+      );
+    }
+
+    const plan = await this.prisma.legacyPlan.findUnique({ where: { userId } });
+    if (plan?.legacyId != null && plan.status !== LegacyPlanStatus.CANCELLED) {
+      throw new ConflictException(
+        'Your legacy is already registered on-chain, so the number of guardians who must confirm is now fixed.',
+      );
+    }
+
+    await this.prisma.legacyPlan.upsert({
+      where: { userId },
+      create: { userId, threshold, status: LegacyPlanStatus.DRAFT },
+      update: { threshold },
+    });
+
+    return this.guardianSettings(userId);
   }
 
   // -------------------------------------------------------------------------
@@ -120,7 +167,7 @@ export class LegacyService {
       );
     }
 
-    const threshold = dto.threshold ?? Math.min(2, guardians.length);
+    const threshold = dto.threshold ?? existing?.threshold ?? Math.min(2, guardians.length);
     if (threshold > guardians.length) {
       throw new BadRequestException(
         "The approval threshold can't be more than the number of guardians.",
@@ -408,8 +455,17 @@ export class LegacyService {
     const beneficiaries = await this.prisma.beneficiary.findMany({
       where: { userId },
     });
+    const webOrigin = (this.config.get<string>('WEB_ORIGIN') ?? 'http://localhost:3000').replace(
+      /\/+$/,
+      '',
+    );
     for (const beneficiary of beneficiaries) {
-      this.notifications.beneficiaryNotified(beneficiary.email, beneficiary.name);
+      // The claim link is only reachable with the beneficiary's own token; skip
+      // the CTA rather than send a broken link if one is somehow missing.
+      const claimUrl = beneficiary.claimToken
+        ? `${webOrigin}/claim/${beneficiary.claimToken}`
+        : undefined;
+      this.notifications.beneficiaryNotified(beneficiary.email, beneficiary.name, claimUrl);
     }
     await this.activity.record(
       userId,
@@ -439,7 +495,7 @@ export class LegacyService {
         data: { status: AssetStatus.CLAIMED },
       });
       if (user?.email) {
-        this.notifications.assetClaimed(user.email, beneficiary.name);
+        this.notifications.assetClaimed(user.email, beneficiary.name, user.notificationPrefs);
       }
       await this.activity.record(
         userId,

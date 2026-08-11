@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Resend } from 'resend';
+import { NotificationChannel, wantsChannel } from './notification-preferences';
 
 /**
  * Transactional email for Heirloom, sent through Resend. The public methods are
@@ -50,8 +51,9 @@ export class NotificationsService {
     );
   }
 
-  /** Sent when a guardian accepts / is verified. */
-  guardianAccepted(ownerEmail: string, guardianName: string): void {
+  /** Sent when a guardian accepts / is verified. Gated by the owner's prefs. */
+  guardianAccepted(ownerEmail: string, guardianName: string, ownerPrefs?: unknown): void {
+    if (!this.ownerWants(ownerPrefs, 'guardianResponses')) return;
     void this.dispatch(
       ownerEmail,
       'A guardian accepted your invitation',
@@ -63,8 +65,9 @@ export class NotificationsService {
     );
   }
 
-  /** Upcoming Life Check-In reminder. */
-  checkInReminder(email: string, daysRemaining: number): void {
+  /** Upcoming Life Check-In reminder. Gated by the owner's prefs. */
+  checkInReminder(email: string, daysRemaining: number, ownerPrefs?: unknown): void {
+    if (!this.ownerWants(ownerPrefs, 'checkInReminders')) return;
     void this.dispatch(
       email,
       'We’re just checking in',
@@ -105,8 +108,20 @@ export class NotificationsService {
     );
   }
 
-  /** A beneficiary has a legacy waiting. */
-  beneficiaryNotified(email: string, beneficiaryName: string): void {
+  /**
+   * A beneficiary has a legacy waiting. The `claimUrl` is their private, token
+   * -scoped link to the Legacy Capsule — the only way in, since a beneficiary
+   * has no account. It lets them VIEW and, when ready, sign for their own share;
+   * it can never move funds on its own.
+   */
+  beneficiaryNotified(email: string, beneficiaryName: string, claimUrl?: string): void {
+    const cta = claimUrl
+      ? `<p style="margin-top:24px;">
+           <a href="${esc(claimUrl)}" style="display:inline-block;background:#a08a6a;color:#ffffff;text-decoration:none;padding:12px 28px;border-radius:999px;font-size:16px;">Open your legacy</a>
+         </p>
+         <p style="font-size:13px;color:#9a9a9a;">This link is private to you.
+         Please keep it safe — it’s how you’ll reach what was left for you.</p>`
+      : '';
     void this.dispatch(
       email,
       'A legacy has been prepared for you',
@@ -115,13 +130,15 @@ export class NotificationsService {
         `<p>Hi ${esc(beneficiaryName)},</p>
          <p>Someone who cared about you has prepared a gift on Heirloom. When
          you’re ready — there’s no rush — you can open your legacy and see what
-         they left for you.</p>`,
+         they left for you.</p>
+         ${cta}`,
       ),
     );
   }
 
-  /** Confirmation that a beneficiary claimed their assets. */
-  assetClaimed(ownerEmail: string, beneficiaryName: string): void {
+  /** Confirmation that a beneficiary claimed their assets. Gated by the owner's prefs. */
+  assetClaimed(ownerEmail: string, beneficiaryName: string, ownerPrefs?: unknown): void {
+    if (!this.ownerWants(ownerPrefs, 'beneficiaryClaims')) return;
     void this.dispatch(
       ownerEmail,
       'A beneficiary has received their legacy',
@@ -149,6 +166,15 @@ export class NotificationsService {
   // -------------------------------------------------------------------------
   // Internal helpers.
   // -------------------------------------------------------------------------
+
+  /**
+   * Whether the owner wants a courtesy email on `channel`. Preferences gate only
+   * the owner's own inbox; a null/absent preference resolves to on so a new
+   * account never silently loses a notification.
+   */
+  private ownerWants(prefs: unknown, channel: NotificationChannel): boolean {
+    return wantsChannel(prefs, channel);
+  }
 
   /**
    * Send an email, swallowing every failure. Notifications must never break the

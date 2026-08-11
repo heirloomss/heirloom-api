@@ -82,6 +82,11 @@ model User {
   passwordHash  String?
   name          String
   walletAddress String?  @unique
+  // Per-channel notification preferences, e.g.
+  // { "checkInReminders": true, "guardianActivity": true, "productUpdates": false }.
+  // Null means "not yet chosen" — the app treats every essential channel as on
+  // by default so a missing preference never silently drops a safety email.
+  notificationPrefs Json?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -119,6 +124,12 @@ model Beneficiary {
   email                String
   phone                String?
   walletAddress        String?
+  // An unguessable, per-beneficiary token (256 bits, hex). It is the only key
+  // to this beneficiary's public Legacy Capsule at /claim/:token, and is emailed
+  // to them when the legacy is released. Whoever holds it can VIEW the capsule,
+  // but can never move funds: claiming still requires the beneficiary's own
+  // Freighter signature from the wallet recorded on-chain.
+  claimToken           String?  @unique
   allocationPercentage Int      @default(0)
   verified             Boolean  @default(false)
   createdAt            DateTime @default(now())

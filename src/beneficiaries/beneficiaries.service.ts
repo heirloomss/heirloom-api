@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { randomBytes } from 'crypto';
 import { Beneficiary } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ActivityService } from '../activity/activity.service';
@@ -34,7 +35,7 @@ export class BeneficiariesService {
 
   async create(userId: string, dto: CreateBeneficiaryDto): Promise<Beneficiary> {
     const beneficiary = await this.prisma.beneficiary.create({
-      data: { ...dto, userId },
+      data: { ...dto, userId, claimToken: this.newClaimToken() },
     });
     await this.activity.record(
       userId,
@@ -67,5 +68,14 @@ export class BeneficiariesService {
       `Removed ${beneficiary.name} from your legacy.`,
     );
     return { success: true };
+  }
+
+  /**
+   * A fresh, unguessable claim token: 32 random bytes (256 bits) as hex. It is
+   * the only key to a beneficiary's public Legacy Capsule and is safe to place
+   * in a URL — it grants viewing, never spending.
+   */
+  private newClaimToken(): string {
+    return randomBytes(32).toString('hex');
   }
 }
