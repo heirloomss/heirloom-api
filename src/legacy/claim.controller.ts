@@ -1,5 +1,15 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
+  Res,
+} from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
+import { Response } from 'express';
 import { ClaimService } from './claim.service';
 import {
   PublicClaimBuildDto,
@@ -29,6 +39,36 @@ export class ClaimController {
   @Get(':token')
   capsule(@Param('token') token: string) {
     return this.claim.capsule(token);
+  }
+
+  /** GET /api/claim/:token/documents/:id/download — decrypts a filed document. */
+  @Get(':token/documents/:id/download')
+  async downloadDocument(
+    @Param('token') token: string,
+    @Param('id') id: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const { file, document } = await this.claim.downloadDocument(token, id);
+    res.set({
+      'Content-Type': document.mimeType,
+      'Content-Disposition': `attachment; filename="${encodeURIComponent(document.title)}"`,
+    });
+    return file;
+  }
+
+  /** GET /api/claim/:token/messages/:id/media — decrypts a voice/video/photo. */
+  @Get(':token/messages/:id/media')
+  async downloadMessageMedia(
+    @Param('token') token: string,
+    @Param('id') id: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const { file, mimeType, title } = await this.claim.downloadMessageMedia(token, id);
+    res.set({
+      'Content-Type': mimeType,
+      'Content-Disposition': `inline; filename="${encodeURIComponent(title)}"`,
+    });
+    return file;
   }
 
   /**

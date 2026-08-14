@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, StreamableFile } from '@nestjs/common';
 import {
   Beneficiary,
   DocumentCategory,
@@ -9,9 +9,11 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { EncryptionService } from '../encryption/encryption.service';
+import { StorageService } from '../archive/storage.service';
 import { UnsignedTransaction } from '../stellar/stellar.types';
 import { LegacyService } from './legacy.service';
 import { PublicClaimAction } from './dto/claim-public.dto';
+import { isReleaseDue, parseReleaseRule } from './release-rule';
 
 /** A message rendered for the capsule, with its letter body decrypted. */
 export interface CapsuleMessage {
@@ -19,6 +21,7 @@ export interface CapsuleMessage {
   type: string;
   title: string;
   body: string | null;
+  hasMedia: boolean;
 }
 
 /** The beneficiary-facing capsule payload. */
@@ -63,6 +66,7 @@ export class ClaimService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly encryption: EncryptionService,
+    private readonly storage: StorageService,
     private readonly legacy: LegacyService,
   ) {}
 
@@ -116,6 +120,12 @@ export class ClaimService {
       }),
     ]);
 
+    const dueMessages = messages.filter((m) =>
+      isReleaseDue(parseReleaseRule(m.releaseRule), plan, {
+        dateOfBirth: beneficiary.dateOfBirth,
+      }),
+    );
+
     return {
       ...base,
       message:
@@ -136,7 +146,7 @@ export class ClaimService {
         title: d.title,
         category: this.friendlyCategory(d.category),
       })),
-      messages: messages.map((m) => this.toCapsuleMessage(m)),
+      messages: dueMessages.map((m) => this.toCapsuleMessage(m)),
     };
   }
 
@@ -169,6 +179,47 @@ export class ClaimService {
       signedXdr,
       beneficiaryId: beneficiary.id,
     });
+  }
+
+  /** Decrypt and stream an archive document for this capsule's beneficiary. */
+  async downloadDocument(token: string, documentId: string) {
+    const { beneficiary, plan } = await this.resolve(token);
+    this.assertRevealed(plan);
+    const document = await this.prisma.document.findFirst({
+      where: { id: documentId, userId: beneficiary.userId },
+    });
+    if (!document) {
+      throw new NotFoundException("We couldn't find that document.");
+    }
+    const ciphertext = await this.storage.read(this.storage.keyFromUrl(document.fileUrl));
+    const plaintext = this.encryption.decrypt(ciphertext, document.iv, document.authTag);
+    return { file: new StreamableFile(plaintext), document };
+  }
+
+  /** Decrypt and stream a voice/video/photo that is due for this beneficiary. */
+  async downloadMessageMedia(token: string, messageId: string) {
+    const { beneficiary, plan } = await this.resolve(token);
+    this.assertRevealed(plan);
+    const message = await this.prisma.message.findFirst({
+      where: { id: messageId, userId: beneficiary.userId, recipientId: beneficiary.id },
+    });
+    if (!message?.fileUrl || !message.contentIv || !message.contentAuthTag) {
+      throw new NotFoundException("We couldn't find that recording.");
+    }
+    if (
+      !isReleaseDue(parseReleaseRule(message.releaseRule), plan, {
+        dateOfBirth: beneficiary.dateOfBirth,
+      })
+    ) {
+      throw new NotFoundException('That memory is not ready to open yet.');
+    }
+    const ciphertext = await this.storage.read(this.storage.keyFromUrl(message.fileUrl));
+    const buffer = this.encryption.decrypt(ciphertext, message.contentIv, message.contentAuthTag);
+    return {
+      file: new StreamableFile(buffer),
+      mimeType: this.mediaMime(message.type),
+      title: message.title,
+    };
   }
 
   // -------------------------------------------------------------------------
@@ -214,7 +265,28 @@ export class ClaimService {
       type: this.friendlyType(message.type),
       title: message.title,
       body: this.decryptBody(message),
+      hasMedia: Boolean(message.fileUrl),
     };
+  }
+
+  private assertRevealed(plan: LegacyPlan | null): void {
+    const status = plan?.status ?? LegacyPlanStatus.DRAFT;
+    if (status !== LegacyPlanStatus.VERIFIED && status !== LegacyPlanStatus.RELEASED) {
+      throw new NotFoundException('This gift is still being prepared.');
+    }
+  }
+
+  private mediaMime(type: MessageType): string {
+    switch (type) {
+      case MessageType.VIDEO:
+        return 'video/mp4';
+      case MessageType.VOICE:
+        return 'audio/mpeg';
+      case MessageType.PHOTO:
+        return 'image/jpeg';
+      default:
+        return 'application/octet-stream';
+    }
   }
 
   /**
@@ -271,6 +343,8 @@ export class ClaimService {
         return 'Tax';
       case DocumentCategory.PASSWORD_HINT:
         return 'Password Hint';
+      case DocumentCategory.WILL:
+        return 'Will';
       default:
         return 'Other';
     }

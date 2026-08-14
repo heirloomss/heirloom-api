@@ -1,3 +1,4 @@
+import { Transform } from 'class-transformer';
 import { IsEmail, IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
 
 export class CreateGuardianDto {
@@ -16,6 +17,7 @@ export class CreateGuardianDto {
 
   /** Optional at invite time; recorded when the guardian connects their wallet. */
   @IsOptional()
+  @Transform(({ value }) => (value === '' ? undefined : value))
   @Matches(/^G[A-Z2-7]{55}$/, {
     message: "That doesn't look like a valid Stellar account.",
   })

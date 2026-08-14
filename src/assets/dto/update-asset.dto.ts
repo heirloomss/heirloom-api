@@ -12,6 +12,11 @@ import { AssetStatus } from '@prisma/client';
 export class UpdateAssetDto {
   @IsOptional()
   @IsString()
+  @MaxLength(120)
+  label?: string;
+
+  @IsOptional()
+  @IsString()
   @MinLength(1)
   @MaxLength(12)
   @Matches(/^[A-Za-z0-9]+$/, { message: 'Asset codes use letters and numbers only.' })

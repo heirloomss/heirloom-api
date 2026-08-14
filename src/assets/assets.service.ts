@@ -40,6 +40,7 @@ export class AssetsService {
     const asset = await this.prisma.asset.create({
       data: {
         userId,
+        label: dto.label?.trim() || dto.assetCode.toUpperCase(),
         assetCode: dto.assetCode.toUpperCase(),
         amount: new Prisma.Decimal(dto.amount),
         recipientId: dto.recipientId ?? null,
@@ -59,6 +60,7 @@ export class AssetsService {
     await this.assertRecipient(userId, dto.recipientId);
 
     const data: Prisma.AssetUpdateInput = {};
+    if (dto.label !== undefined) data.label = dto.label.trim() || undefined;
     if (dto.assetCode !== undefined) data.assetCode = dto.assetCode.toUpperCase();
     if (dto.amount !== undefined) data.amount = new Prisma.Decimal(dto.amount);
     if (dto.status !== undefined) data.status = dto.status;

@@ -1,3 +1,4 @@
+import { Transform } from 'class-transformer';
 import {
   IsNumberString,
   IsOptional,
@@ -8,6 +9,12 @@ import {
 } from 'class-validator';
 
 export class CreateAssetDto {
+  /** Human name, e.g. "Family Savings". */
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  label?: string;
+
   /** Asset code, e.g. XLM, USDC. */
   @IsString()
   @MinLength(1, { message: 'Please choose an asset (e.g. XLM or USDC).' })
@@ -16,6 +23,7 @@ export class CreateAssetDto {
   assetCode!: string;
 
   /** Amount as a decimal string to preserve precision (Prisma Decimal). */
+  @Transform(({ value }) => (value == null ? value : String(value)))
   @IsNumberString({}, { message: 'Please enter a valid amount.' })
   amount!: string;
 

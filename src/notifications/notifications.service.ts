@@ -4,7 +4,7 @@ import { Resend } from 'resend';
 import { NotificationChannel, wantsChannel } from './notification-preferences';
 
 /**
- * Transactional email for Heirloom, sent through Resend. The public methods are
+ * Transactional email for Heirloome, sent through Resend. The public methods are
  * fire-and-forget (they never throw): a failed or unconfigured send is logged,
  * never surfaced to the caller, so notifications can't break a legacy action.
  *
@@ -21,7 +21,7 @@ export class NotificationsService {
 
   constructor(private readonly config: ConfigService) {
     const apiKey = this.config.get<string>('RESEND_API_KEY') ?? '';
-    this.from = this.config.get<string>('EMAIL_FROM') ?? 'Heirloom <onboarding@resend.dev>';
+    this.from = this.config.get<string>('EMAIL_FROM') ?? 'Heirloome <onboarding@resend.dev>';
     this.enabled = Boolean(apiKey);
 
     if (this.enabled) {
@@ -39,12 +39,12 @@ export class NotificationsService {
   guardianInvited(email: string, name: string, ownerName: string): void {
     void this.dispatch(
       email,
-      `${ownerName} would like you to be a Heirloom guardian`,
+      `${ownerName} would like you to be a Heirloome guardian`,
       this.layout(
         'You’ve been trusted',
         `<p>Hi ${esc(name)},</p>
          <p>${esc(ownerName)} trusts you to help look after their legacy on
-         Heirloom. There’s nothing to do right now — we’ll only ever reach out
+         Heirloome. There’s nothing to do right now — we’ll only ever reach out
          if it’s truly needed, and only to confirm things gently.</p>
          <p>Thank you for being someone they can count on.</p>`,
       ),
@@ -102,7 +102,7 @@ export class NotificationsService {
         `<p>Hi ${esc(guardianName)},</p>
          <p>We haven’t heard from ${esc(ownerName)} in a while. As one of their
          trusted guardians, we’d be grateful if you could help us confirm
-         things. When you’re ready, open Heirloom and connect your wallet to
+         things. When you’re ready, open Heirloome and connect your wallet to
          review the request.</p>`,
       ),
     );
@@ -128,7 +128,7 @@ export class NotificationsService {
       this.layout(
         'Something was left for you',
         `<p>Hi ${esc(beneficiaryName)},</p>
-         <p>Someone who cared about you has prepared a gift on Heirloom. When
+         <p>Someone who cared about you has prepared a gift on Heirloome. When
          you’re ready — there’s no rush — you can open your legacy and see what
          they left for you.</p>
          ${cta}`,
@@ -203,7 +203,7 @@ export class NotificationsService {
     }
   }
 
-  /** Wrap body HTML in Heirloom's calm, minimal email shell. */
+  /** Wrap body HTML in Heirloome's calm, minimal email shell. */
   private layout(heading: string, body: string): string {
     return `<!doctype html>
 <html>
@@ -213,7 +213,7 @@ export class NotificationsService {
         <td align="center">
           <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.06);">
             <tr>
-              <td style="padding:28px 36px 8px;font-size:14px;letter-spacing:2px;text-transform:uppercase;color:#a08a6a;">Heirloom</td>
+              <td style="padding:28px 36px 8px;font-size:14px;letter-spacing:2px;text-transform:uppercase;color:#a08a6a;">Heirloome</td>
             </tr>
             <tr>
               <td style="padding:0 36px 8px;font-size:24px;line-height:1.3;color:#1f1f1f;">${esc(heading)}</td>
@@ -223,7 +223,7 @@ export class NotificationsService {
             </tr>
             <tr>
               <td style="padding:20px 36px 28px;font-size:13px;line-height:1.6;color:#9a9a9a;border-top:1px solid #eee;">
-                Heirloom keeps what matters safe, and passes it on when the time is right.
+                Heirloome keeps what matters safe, and passes it on when the time is right.
               </td>
             </tr>
           </table>

@@ -37,6 +37,7 @@ enum DocumentCategory {
   BUSINESS
   TAX
   PASSWORD_HINT
+  WILL
   OTHER
 }
 
@@ -124,6 +125,8 @@ model Beneficiary {
   email                String
   phone                String?
   walletAddress        String?
+  // Optional — used to gate AT_AGE Legacy Journey messages (e.g. 18th birthday).
+  dateOfBirth          DateTime?
   // An unguessable, per-beneficiary token (256 bits, hex). It is the only key
   // to this beneficiary's public Legacy Capsule at /claim/:token, and is emailed
   // to them when the legacy is released. Whoever holds it can VIEW the capsule,
@@ -161,6 +164,8 @@ model Guardian {
 model Asset {
   id          String      @id @default(cuid())
   userId      String
+  // Human name the owner gave this (e.g. "Family Savings"). Falls back to assetCode.
+  label       String?
   assetCode   String
   amount      Decimal     @db.Decimal(20, 7)
   recipientId String?
@@ -224,6 +229,11 @@ model CheckIn {
   lastCheckIn DateTime      @default(now())
   nextCheckIn DateTime
   status      CheckInStatus @default(ACTIVE)
+  // Safeguard cascade from the PRD: upcoming reminder → missed reminder →
+  // second reminder → guardians. Reset to zero whenever the owner taps "I'm Here".
+  upcomingReminderSent Boolean   @default(false)
+  missedReminderCount  Int       @default(0)
+  lastReminderAt       DateTime?
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
@@ -261,6 +271,11 @@ model LegacyPlan {
   totalAmount  Decimal?       @db.Decimal(38, 0)
   threshold  Int              @default(2)
   status     LegacyPlanStatus @default(DRAFT)
+  verifiedAt DateTime?
+  releasedAt DateTime?
+  // Owner-confirmed life events that unlock ON_EVENT Journey messages
+  // (e.g. ["marriage", "graduation"]).
+  confirmedEvents Json?
   createdAt  DateTime         @default(now())
   updatedAt  DateTime         @updatedAt
 

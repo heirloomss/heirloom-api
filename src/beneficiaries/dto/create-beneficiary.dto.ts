@@ -1,4 +1,6 @@
+import { Transform } from 'class-transformer';
 import {
+  IsDateString,
   IsEmail,
   IsInt,
   IsOptional,
@@ -30,10 +32,16 @@ export class CreateBeneficiaryDto {
   phone?: string;
 
   @IsOptional()
+  @Transform(({ value }) => (value === '' ? undefined : value))
   @Matches(/^G[A-Z2-7]{55}$/, {
     message: "That doesn't look like a valid Stellar account.",
   })
   walletAddress?: string;
+
+  /** Optional — gates AT_AGE Legacy Journey messages (e.g. 18th birthday). */
+  @IsOptional()
+  @IsDateString({}, { message: 'Please enter a valid date of birth.' })
+  dateOfBirth?: string;
 
   @IsInt()
   @Min(0, { message: "Allocation can't be negative." })

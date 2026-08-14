@@ -10,6 +10,6 @@ import { StorageService } from './storage.service';
   imports: [CommonModule, ActivityModule, EncryptionModule],
   controllers: [ArchiveController],
   providers: [ArchiveService, StorageService],
-  exports: [ArchiveService],
+  exports: [ArchiveService, StorageService],
 })
 export class ArchiveModule {}

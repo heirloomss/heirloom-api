@@ -31,6 +31,11 @@ export const envSchema = z.object({
   STELLAR_RPC_URL: z.string().default('https://soroban-testnet.stellar.org'),
   HEIRLOOM_CONTRACT_ID: z.string().optional().default(''),
 
+  // Hours between missed-check-in reminders (default 7 days). After two
+  // reminders the scheduler notifies guardians. Lower this on testnet to
+  // demonstrate the cascade without waiting a week.
+  CHECK_IN_REMINDER_GAP_HOURS: z.coerce.number().int().positive().default(168),
+
   // Object storage (Cloudflare R2, S3-compatible) for the encrypted archive.
   R2_ACCOUNT_ID: z.string().optional().default(''),
   R2_ACCESS_KEY_ID: z.string().optional().default(''),
@@ -40,7 +45,7 @@ export const envSchema = z.object({
 
   // Transactional email (Resend).
   RESEND_API_KEY: z.string().optional().default(''),
-  EMAIL_FROM: z.string().optional().default('Heirloom <onboarding@resend.dev>'),
+  EMAIL_FROM: z.string().optional().default('Heirloome <onboarding@resend.dev>'),
 });
 
 export type Env = z.infer<typeof envSchema>;

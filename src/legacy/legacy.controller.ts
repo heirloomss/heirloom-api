@@ -14,6 +14,7 @@ import { LegacyService } from './legacy.service';
 import { ProtectLegacyDto } from './dto/protect-legacy.dto';
 import { SubmitLegacyDto } from './dto/submit-legacy.dto';
 import { SetThresholdDto } from './dto/set-threshold.dto';
+import { ConfirmMilestoneDto } from './dto/confirm-milestone.dto';
 import { BuildClaimDto, BuildReleaseDto } from './dto/build-action.dto';
 
 /**
@@ -30,6 +31,12 @@ export class LegacyController {
   @Get()
   overview(@CurrentUser('id') userId: string) {
     return this.legacy.overview(userId);
+  }
+
+  /** GET /api/legacy/journey — the signature Legacy Journey timeline. */
+  @Get('journey')
+  journey(@CurrentUser('id') userId: string) {
+    return this.legacy.journey(userId);
   }
 
   /** GET /api/legacy/guardian-settings — the "N of M" approval threshold. */
@@ -90,5 +97,12 @@ export class LegacyController {
   @Get('claims')
   claims(@CurrentUser('id') userId: string) {
     return this.legacy.claims(userId);
+  }
+
+  /** POST /api/legacy/milestones — owner confirms a life event for the Journey. */
+  @Post('milestones')
+  @HttpCode(HttpStatus.OK)
+  confirmMilestone(@CurrentUser('id') userId: string, @Body() dto: ConfirmMilestoneDto) {
+    return this.legacy.confirmMilestone(userId, dto.event);
   }
 }

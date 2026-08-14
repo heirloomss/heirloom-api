@@ -1,4 +1,4 @@
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 import {
   IsEnum,
   IsIn,
@@ -27,6 +27,7 @@ export class ReleaseRuleDto {
 }
 
 export class CreateMessageDto {
+  @Transform(({ value }) => (typeof value === 'string' ? value.toUpperCase() : value))
   @IsEnum(MessageType, { message: 'Choose a message type: LETTER, VIDEO, VOICE or PHOTO.' })
   type!: MessageType;
 
@@ -37,6 +38,7 @@ export class CreateMessageDto {
 
   /** Optional beneficiary the message is addressed to. */
   @IsOptional()
+  @Transform(({ value }) => (value === '' ? undefined : value))
   @IsString()
   recipientId?: string;
 
@@ -51,6 +53,16 @@ export class CreateMessageDto {
   fileUrl?: string;
 
   @IsOptional()
+  @Transform(({ value }) => {
+    if (typeof value === 'string') {
+      try {
+        return JSON.parse(value) as ReleaseRuleDto;
+      } catch {
+        return value;
+      }
+    }
+    return value;
+  })
   @ValidateNested()
   @Type(() => ReleaseRuleDto)
   releaseRule?: ReleaseRuleDto;

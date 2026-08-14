@@ -10,7 +10,7 @@ import { ClaimController } from './claim.controller';
 @Module({
   // EncryptionModule is NOT @Global, so it must be imported explicitly for the
   // public capsule to decrypt letter bodies before revealing them.
-  imports: [CommonModule, ActivityModule, EncryptionModule],
+  imports: [CommonModule, ActivityModule, EncryptionModule, ArchiveModule],
   controllers: [LegacyController, ClaimController],
   providers: [LegacyService, ClaimService],
   exports: [LegacyService],

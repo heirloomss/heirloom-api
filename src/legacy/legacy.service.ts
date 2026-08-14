@@ -21,6 +21,7 @@ import { StellarService } from '../stellar/stellar.service';
 import { ContractBeneficiary, UnsignedTransaction } from '../stellar/stellar.types';
 import { ProtectLegacyDto } from './dto/protect-legacy.dto';
 import { SubmitLegacyDto } from './dto/submit-legacy.dto';
+import { parseReleaseRule, releaseRuleLabel } from './release-rule';
 
 /**
  * Orchestrates the self-custodial legacy lifecycle.
@@ -422,10 +423,10 @@ export class LegacyService {
     }
 
     if (approvals >= plan.threshold) {
-      await this.prisma.legacyPlan.update({
-        where: { userId },
-        data: { status: LegacyPlanStatus.VERIFIED },
-      });
+    await this.prisma.legacyPlan.update({
+      where: { userId },
+      data: { status: LegacyPlanStatus.VERIFIED, verifiedAt: new Date() },
+    });
       await this.prisma.checkIn.updateMany({
         where: { userId },
         data: { status: CheckInStatus.VERIFYING },
@@ -441,7 +442,7 @@ export class LegacyService {
   private async reconcileRelease(userId: string): Promise<void> {
     await this.prisma.legacyPlan.update({
       where: { userId },
-      data: { status: LegacyPlanStatus.RELEASED },
+      data: { status: LegacyPlanStatus.RELEASED, releasedAt: new Date() },
     });
     await this.prisma.asset.updateMany({
       where: { userId },
@@ -573,6 +574,103 @@ export class LegacyService {
     };
   }
 
+  /**
+   * The Legacy Journey timeline — assets, documents and messages ordered by
+   * the moment they should reach the people they're for.
+   */
+  async journey(userId: string) {
+    const [assets, documents, messages, beneficiaries] = await Promise.all([
+      this.prisma.asset.findMany({ where: { userId }, orderBy: { createdAt: 'asc' } }),
+      this.prisma.document.findMany({ where: { userId }, orderBy: { createdAt: 'asc' } }),
+      this.prisma.message.findMany({ where: { userId }, orderBy: { createdAt: 'asc' } }),
+      this.prisma.beneficiary.findMany({ where: { userId } }),
+    ]);
+    const names = new Map(beneficiaries.map((b) => [b.id, b.name]));
+
+    const events: Array<{
+      id: string;
+      moment: string;
+      title: string;
+      detail: string;
+      releaseRule: string;
+      kind: 'asset' | 'document' | 'message';
+      order: number;
+    }> = [];
+
+    for (const asset of assets) {
+      const forWhom = asset.recipientId ? names.get(asset.recipientId) : null;
+      events.push({
+        id: asset.id,
+        moment: 'Immediately',
+        title: asset.label || asset.assetCode,
+        detail: forWhom
+          ? `${asset.amount} ${asset.assetCode} for ${forWhom}`
+          : `${asset.amount} ${asset.assetCode}, shared among everyone`,
+        releaseRule: 'Immediately',
+        kind: 'asset',
+        order: 0,
+      });
+    }
+    for (const document of documents) {
+      events.push({
+        id: document.id,
+        moment: 'Immediately',
+        title: document.title,
+        detail: 'Filed in the Digital Archive, released with the legacy.',
+        releaseRule: 'Immediately',
+        kind: 'document',
+        order: 0,
+      });
+    }
+    for (const message of messages) {
+      const rule = parseReleaseRule(message.releaseRule);
+      const forWhom = message.recipientId ? names.get(message.recipientId) : null;
+      events.push({
+        id: message.id,
+        moment: releaseRuleLabel(rule),
+        title: message.title,
+        detail: forWhom ? `A ${message.type.toLowerCase()} for ${forWhom}` : `A ${message.type.toLowerCase()} for the people you love`,
+        releaseRule: releaseRuleLabel(rule),
+        kind: 'message',
+        order: this.journeyOrder(rule.kind),
+      });
+    }
+
+    events.sort((a, b) => a.order - b.order);
+    return events.map(({ order: _order, ...event }) => event);
+  }
+
+  /**
+   * Owner confirms a life event (wedding, graduation, …) so ON_EVENT Journey
+   * messages can open for beneficiaries.
+   */
+  async confirmMilestone(userId: string, event: string) {
+    const plan = await this.prisma.legacyPlan.findUnique({ where: { userId } });
+    if (!plan) {
+      throw new BadRequestException('Start by protecting your legacy.');
+    }
+    const key = event.trim().toLowerCase();
+    if (!key) {
+      throw new BadRequestException('Please name the milestone.');
+    }
+    const existing = Array.isArray(plan.confirmedEvents)
+      ? (plan.confirmedEvents as unknown[]).map((e) => String(e).toLowerCase())
+      : [];
+    if (!existing.includes(key)) {
+      existing.push(key);
+    }
+    await this.prisma.legacyPlan.update({
+      where: { userId },
+      data: { confirmedEvents: existing },
+    });
+    await this.activity.record(
+      userId,
+      ActivityType.LEGACY_UPDATED,
+      `A milestone was marked: ${key}. Messages waiting on that moment can now be shared.`,
+    );
+    return { confirmedEvents: existing };
+  }
+
   // -------------------------------------------------------------------------
   // Helpers.
   // -------------------------------------------------------------------------
@@ -601,5 +699,22 @@ export class LegacyService {
     if (typeof data === 'number' && Number.isFinite(data)) return BigInt(data);
     if (typeof data === 'string' && /^\d+$/.test(data)) return BigInt(data);
     return null;
+  }
+
+  private journeyOrder(kind: string): number {
+    switch (kind) {
+      case 'IMMEDIATELY':
+        return 0;
+      case 'AFTER_DAYS':
+        return 1;
+      case 'ON_DATE':
+        return 2;
+      case 'AT_AGE':
+        return 3;
+      case 'ON_EVENT':
+        return 4;
+      default:
+        return 5;
+    }
   }
 }

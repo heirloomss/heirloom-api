@@ -1,8 +1,8 @@
 {
   "name": "heirloom-api",
   "version": "1.0.0",
-  "description": "Heirloom digital-legacy platform API — beneficiaries, protected Stellar assets, encrypted archive, personal messages, trusted guardians, Life Check-Ins and claim packages.",
-  "author": "Heirloom",
+  "description": "Heirloome digital-legacy platform API — beneficiaries, protected Stellar assets, encrypted archive, personal messages, trusted guardians, Life Check-Ins and claim packages.",
+  "author": "Heirloome",
   "license": "MIT",
   "private": true,
   "packageManager": "pnpm@11.1.2",

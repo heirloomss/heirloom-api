@@ -1,6 +1,6 @@
 # heirloom-api
 
-The off-chain heart of **Heirloom** — the digital legacy platform built on
+The off-chain heart of **Heirloome** — the digital legacy platform built on
 Stellar. This NestJS service owns all application and business logic:
 accounts, beneficiaries, guardians, the encrypted Digital Archive, personal
 messages, Life Check-Ins, notifications, the Family Timeline activity feed, and
@@ -55,7 +55,9 @@ See [`.env.example`](./.env.example) for the annotated list. Key variables:
 | `ENCRYPTION_KEY` | 64-hex-char AES-256-GCM key for at-rest encryption |
 | `REDIS_URL` | BullMQ queue for check-in scheduling |
 | `STELLAR_NETWORK` / `STELLAR_RPC_URL` | Soroban network endpoint |
-| `STELLAR_SECRET_KEY` / `HEIRLOOM_CONTRACT_ID` | Contract interaction. If unset, StellarService runs in simulated mode so the app works offline |
+| `HEIRLOOM_CONTRACT_ID` | Deployed `legacy` contract id (`C…`). If unset, on-chain endpoints return HTTP 503 — the API never fabricates transaction hashes |
+| `R2_*` | Cloudflare R2 credentials for the encrypted archive. Uploads return 503 until set |
+| `RESEND_API_KEY` / `EMAIL_FROM` | Transactional email. Invites and claim links are skipped (and logged) until set |
 | `WEB_ORIGIN` | CORS origin for `heirloom-web` |
 | `PORT` | HTTP port (default `4000`) |
 
@@ -77,7 +79,7 @@ via the `Authorization: Bearer <token>` header. Every mutation also records an
 | Assets | `GET/POST /api/assets` · `GET/PATCH/DELETE /api/assets/:id` |
 | Archive | `POST /api/archive` (multipart) · `GET /api/archive` · `GET /api/archive/:id/download` · `DELETE /api/archive/:id` |
 | Messages | `GET/POST /api/messages` · `GET/PATCH/DELETE /api/messages/:id` |
-| Legacy | `GET /api/legacy/journey` · verification & claim orchestration |
+| Legacy | `GET /api/legacy` · `GET /api/legacy/journey` · `GET /api/legacy/claims` · verification & claim orchestration |
 | Activity | `GET /api/activity` · timeline/history for the Family Timeline |
 
 Documents are encrypted with AES-256-GCM before storage; `GET
@@ -99,7 +101,7 @@ src/
 ├── activity/        # Family Timeline feed
 ├── notifications/   # email notifications
 ├── scheduler/       # BullMQ Life Check-In jobs
-├── stellar/         # Soroban contract client (simulated when unconfigured)
+├── stellar/         # Unsigned Soroban tx builder (503 until HEIRLOOM_CONTRACT_ID is set)
 ├── encryption/      # AES-256-GCM helpers
 ├── prisma/          # Prisma service/module
 ├── common/          # guards, decorators, filters

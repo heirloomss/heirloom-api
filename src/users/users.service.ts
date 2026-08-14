@@ -85,13 +85,14 @@ export class UsersService {
    * messages and last check-in — the calm dashboard cards from the PRD.
    */
   async summary(userId: string) {
-    const [beneficiaries, documents, messages, assets, checkIn, plan] = await Promise.all([
+    const [beneficiaries, documents, messages, assets, checkIn, plan, guardians] = await Promise.all([
       this.prisma.beneficiary.count({ where: { userId } }),
       this.prisma.document.count({ where: { userId } }),
       this.prisma.message.count({ where: { userId } }),
       this.prisma.asset.findMany({ where: { userId }, select: { amount: true, assetCode: true } }),
       this.prisma.checkIn.findUnique({ where: { userId } }),
       this.prisma.legacyPlan.findUnique({ where: { userId } }),
+      this.prisma.guardian.count({ where: { userId } }),
     ]);
 
     // Sum protected assets grouped by asset code (kept simple; no FX).
@@ -107,6 +108,12 @@ export class UsersService {
       beneficiaries,
       documents,
       messages,
+      guardians,
+      assets: assets.length,
+      // Stablecoins are shown at face value. We never invent an FX rate for XLM.
+      assetsUsd: assets
+        .filter((a) => a.assetCode === 'USDC' || a.assetCode === 'EURC')
+        .reduce((sum, a) => sum + Number(a.amount), 0),
       protectedAssets: protectedByAsset,
       lastCheckIn: checkIn?.lastCheckIn ?? null,
       nextCheckIn: checkIn?.nextCheckIn ?? null,

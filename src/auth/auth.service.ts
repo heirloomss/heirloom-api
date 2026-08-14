@@ -144,7 +144,7 @@ export class AuthService {
   //   await this.activity.record(
   //     user.id,
   //     ActivityType.ACCOUNT_CREATED,
-  //     'Welcome to Heirloom. Your legacy begins here.',
+  //     'Welcome to Heirloome. Your legacy begins here.',
   //   );
   //
   //   return this.buildResult(user);
@@ -175,7 +175,7 @@ export class AuthService {
   /** Build the exact human-readable text the wallet signs. */
   private buildChallengeMessage(walletAddress: string, nonce: string, issuedAt: Date): string {
     return [
-      'Heirloom — sign in to your digital legacy.',
+      'Heirloome — sign in to your digital legacy.',
       '',
       'Signing this message proves you control this account. It is free and',
       'submits no transaction to the network.',
@@ -220,12 +220,12 @@ export class AuthService {
     if (existing) return existing;
 
     const user = await this.prisma.user.create({
-      data: { walletAddress, name: 'Heirloom Member' },
+      data: { walletAddress, name: 'Heirloome Member' },
     });
     await this.activity.record(
       user.id,
       ActivityType.ACCOUNT_CREATED,
-      'Welcome to Heirloom. Your legacy begins here.',
+      'Welcome to Heirloome. Your legacy begins here.',
     );
     return user;
   }
