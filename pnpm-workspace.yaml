@@ -1,0 +1,14 @@
+# Approve post-install build scripts pnpm 10+ blocks by default.
+# Prisma builds/downloads its query + schema engines (the app also runs
+# `prisma generate` in postinstall); msgpackr-extract is an optional native
+# accelerator for msgpack encoding used by BullMQ (pure-JS fallback exists).
+allowBuilds:
+  "@prisma/client": true
+  "@prisma/engines": true
+  prisma: true
+  msgpackr-extract: true
+onlyBuiltDependencies:
+  - "@prisma/client"
+  - "@prisma/engines"
+  - prisma
+  - msgpackr-extract
