@@ -25,13 +25,13 @@ services:
     plan: free
     branch: main
     rootDir: .
-    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm run build && pnpm run prisma:deploy
+    buildCommand: npm install -g pnpm@11.1.2 && pnpm install --frozen-lockfile && pnpm run build && pnpm run prisma:deploy
     startCommand: pnpm run start:prod
     healthCheckPath: /api/health
     autoDeploy: true
     envVars:
       - key: NODE_VERSION
-        value: "22.13.0"
+        value: "22"
       - key: PORT
         value: "4000"
 
