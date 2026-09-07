@@ -423,10 +423,10 @@ export class LegacyService {
     }
 
     if (approvals >= plan.threshold) {
-    await this.prisma.legacyPlan.update({
-      where: { userId },
-      data: { status: LegacyPlanStatus.VERIFIED, verifiedAt: new Date() },
-    });
+      await this.prisma.legacyPlan.update({
+        where: { userId },
+        data: { status: LegacyPlanStatus.VERIFIED, verifiedAt: new Date() },
+      });
       await this.prisma.checkIn.updateMany({
         where: { userId },
         data: { status: CheckInStatus.VERIFYING },
@@ -629,7 +629,9 @@ export class LegacyService {
         id: message.id,
         moment: releaseRuleLabel(rule),
         title: message.title,
-        detail: forWhom ? `A ${message.type.toLowerCase()} for ${forWhom}` : `A ${message.type.toLowerCase()} for the people you love`,
+        detail: forWhom
+          ? `A ${message.type.toLowerCase()} for ${forWhom}`
+          : `A ${message.type.toLowerCase()} for the people you love`,
         releaseRule: releaseRuleLabel(rule),
         kind: 'message',
         order: this.journeyOrder(rule.kind),

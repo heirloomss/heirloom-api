@@ -85,15 +85,19 @@ export class UsersService {
    * messages and last check-in — the calm dashboard cards from the PRD.
    */
   async summary(userId: string) {
-    const [beneficiaries, documents, messages, assets, checkIn, plan, guardians] = await Promise.all([
-      this.prisma.beneficiary.count({ where: { userId } }),
-      this.prisma.document.count({ where: { userId } }),
-      this.prisma.message.count({ where: { userId } }),
-      this.prisma.asset.findMany({ where: { userId }, select: { amount: true, assetCode: true } }),
-      this.prisma.checkIn.findUnique({ where: { userId } }),
-      this.prisma.legacyPlan.findUnique({ where: { userId } }),
-      this.prisma.guardian.count({ where: { userId } }),
-    ]);
+    const [beneficiaries, documents, messages, assets, checkIn, plan, guardians] =
+      await Promise.all([
+        this.prisma.beneficiary.count({ where: { userId } }),
+        this.prisma.document.count({ where: { userId } }),
+        this.prisma.message.count({ where: { userId } }),
+        this.prisma.asset.findMany({
+          where: { userId },
+          select: { amount: true, assetCode: true },
+        }),
+        this.prisma.checkIn.findUnique({ where: { userId } }),
+        this.prisma.legacyPlan.findUnique({ where: { userId } }),
+        this.prisma.guardian.count({ where: { userId } }),
+      ]);
 
     // Sum protected assets grouped by asset code (kept simple; no FX).
     const protectedByAsset: Record<string, string> = {};

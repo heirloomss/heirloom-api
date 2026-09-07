@@ -117,10 +117,7 @@ export class CheckInService {
       lastCheckIn: checkIn.lastCheckIn,
       nextCheckIn: checkIn.nextCheckIn,
       status: checkIn.status,
-      daysRemaining: Math.max(
-        0,
-        Math.ceil((checkIn.nextCheckIn.getTime() - Date.now()) / DAY_MS),
-      ),
+      daysRemaining: Math.max(0, Math.ceil((checkIn.nextCheckIn.getTime() - Date.now()) / DAY_MS)),
     };
   }
 }

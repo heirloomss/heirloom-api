@@ -45,8 +45,10 @@ describe('BeneficiariesService', () => {
 
     const result = await service.create('u1', dto);
 
+    // create() also mints the beneficiary's Legacy Capsule claim token
+    // (64 hex chars = 32 random bytes) — the only key to /claim/<token>.
     expect(prisma.beneficiary.create).toHaveBeenCalledWith({
-      data: { ...dto, userId: 'u1' },
+      data: { ...dto, userId: 'u1', claimToken: expect.stringMatching(/^[0-9a-f]{64}$/) },
     });
     expect(activity.record).toHaveBeenCalledWith(
       'u1',

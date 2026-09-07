@@ -59,8 +59,7 @@ export function isReleaseDue(
 ): boolean {
   const now = opts.now ?? new Date();
   const status = plan?.status ?? LegacyPlanStatus.DRAFT;
-  const revealed =
-    status === LegacyPlanStatus.VERIFIED || status === LegacyPlanStatus.RELEASED;
+  const revealed = status === LegacyPlanStatus.VERIFIED || status === LegacyPlanStatus.RELEASED;
   if (!revealed) {
     return false;
   }
