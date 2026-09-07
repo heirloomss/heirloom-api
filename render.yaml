@@ -1,0 +1,72 @@
+# Render Blueprint for heirloom-api.
+#
+# New + → Blueprint → connect heirloomss/heirloom-api → Apply.
+# Render provisions all three services below and wires DATABASE_URL and
+# REDIS_URL automatically. You only fill in the values marked `sync: false`
+# (JWT_SECRET, ENCRYPTION_KEY, WEB_ORIGIN) in the dashboard.
+#
+# R2 (archive) and Resend (email) are intentionally omitted — archive uploads
+# return HTTP 503 and emails are logged-and-skipped until those are added.
+
+databases:
+  - name: heirloom-postgres
+    databaseName: heirloom
+    user: heirloom
+    plan: free            # Render free Postgres is deleted after 30 days — move to a paid plan for anything real
+    postgresMajorVersion: "16"
+
+services:
+  # Redis (BullMQ Life Check-In scheduler). Render calls this "Key Value".
+  - type: keyvalue
+    name: heirloom-redis
+    plan: free
+    ipAllowList: []        # internal connections only
+
+  - type: web
+    name: heirloom-api
+    runtime: node
+    plan: free
+    branch: main
+    rootDir: .
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm run build && pnpm run prisma:deploy
+    startCommand: pnpm run start:prod
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "22.13.0"
+      - key: PORT
+        value: "4000"
+
+      # Auto-wired from the services above — do not edit.
+      - key: DATABASE_URL
+        fromDatabase:
+          name: heirloom-postgres
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: heirloom-redis
+          property: connectionString
+
+      # You set these in the dashboard.
+      - key: JWT_SECRET
+        sync: false
+      - key: ENCRYPTION_KEY
+        sync: false
+      - key: WEB_ORIGIN            # the Vercel URL of heirloom-web; use http://localhost:3000 until you have it
+        sync: false
+
+      # Fixed values.
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: CHECK_IN_REMINDER_GAP_HOURS
+        value: "168"
+      - key: STELLAR_NETWORK
+        value: testnet
+      - key: STELLAR_RPC_URL
+        value: https://soroban-testnet.stellar.org
+      - key: HEIRLOOM_CONTRACT_ID
+        value: CAA55GCID6DTTQNUFMNT2PNKSBIDMMMKEPP6GKUKL3WJ3SH6QRRSXUNE
+      - key: EMAIL_FROM
+        value: Heirloome <onboarding@resend.dev>
