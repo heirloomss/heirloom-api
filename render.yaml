@@ -1,9 +1,12 @@
 # Render Blueprint for heirloom-api.
 #
 # New + → Blueprint → connect heirloomss/heirloom-api → Apply.
-# Render provisions all three services below and wires DATABASE_URL and
-# REDIS_URL automatically. You only fill in the values marked `sync: false`
-# (JWT_SECRET, ENCRYPTION_KEY, WEB_ORIGIN) in the dashboard.
+# Render provisions PostgreSQL and the Node web service, and wires
+# DATABASE_URL automatically. You fill in the values marked `sync: false`
+# in the dashboard: JWT_SECRET, ENCRYPTION_KEY, WEB_ORIGIN, and REDIS_URL
+# (the Internal URL of your existing Render Key Value instance — Render
+# allows only one free-tier Key Value per account, so this blueprint does
+# not create a new one).
 #
 # R2 (archive) and Resend (email) are intentionally omitted — archive uploads
 # return HTTP 503 and emails are logged-and-skipped until those are added.
@@ -16,12 +19,6 @@ databases:
     postgresMajorVersion: "16"
 
 services:
-  # Redis (BullMQ Life Check-In scheduler). Render calls this "Key Value".
-  - type: keyvalue
-    name: heirloom-redis
-    plan: free
-    ipAllowList: []        # internal connections only
-
   - type: web
     name: heirloom-api
     runtime: node
@@ -38,15 +35,10 @@ services:
       - key: PORT
         value: "4000"
 
-      # Auto-wired from the services above — do not edit.
+      # Auto-wired from the database above — do not edit.
       - key: DATABASE_URL
         fromDatabase:
           name: heirloom-postgres
-          property: connectionString
-      - key: REDIS_URL
-        fromService:
-          type: keyvalue
-          name: heirloom-redis
           property: connectionString
 
       # You set these in the dashboard.
@@ -55,6 +47,8 @@ services:
       - key: ENCRYPTION_KEY
         sync: false
       - key: WEB_ORIGIN            # the Vercel URL of heirloom-web; use http://localhost:3000 until you have it
+        sync: false
+      - key: REDIS_URL             # Internal URL of your existing Render Key Value instance
         sync: false
 
       # Fixed values.
